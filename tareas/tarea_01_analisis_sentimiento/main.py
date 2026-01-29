@@ -32,11 +32,18 @@ def ejemplo_analisis_sentimiento():
             print(f"Cargando frases de la categoría: {categoria.upper()}")
             print('='*60)
             
-            for texto in textos:
+            for item in textos:
+                if isinstance(item, dict):
+                    texto = item.get('text', '')
+                    idioma = item.get('language', 'en')
+                else:
+                    texto = item
+                    idioma = 'en'
+                
                 documents.append({
                     "id": str(doc_id),
                     "text": texto,
-                    "language": "en"
+                    "language": idioma
                 })
                 doc_id += 1
         
@@ -51,6 +58,7 @@ def ejemplo_analisis_sentimiento():
                 doc = documents[idx]
                 
                 print(f"ID: {result.id}")
+                print(f"Idioma: {doc['language'].upper()}")
                 print(f"Texto: {doc['text']}")
                 print(f"Sentimiento detectado: {result.sentiment.upper()}")
                 print(f"Confianza - Positivo: {result.confidence_scores.positive:.2f}, "
