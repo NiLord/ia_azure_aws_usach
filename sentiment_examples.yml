@@ -1,0 +1,23 @@
+positive:
+  - "I absolutely love this new feature; it has saved me so much time."
+  - "The customer support team was incredibly helpful and resolved my issue in minutes."
+  - "This is hands down the best investment I've made all year."
+  - "The interface is intuitive, clean, and a joy to use."
+
+negative:
+  - "I am extremely disappointed with the service I received today."
+  - "The app keeps crashing every time I try to upload a photo."
+  - "This product is a complete waste of money; do not buy it."
+  - "I've been on hold for over an hour, this is unacceptable."
+
+neutral:
+  - "I received the package on Tuesday morning."
+  - "Please confirm if the meeting is scheduled for 3 PM."
+  - "The device is black and weighs approximately 2 pounds."
+  - "I clicked the button, but nothing happened."
+
+mixed:
+  - "The food was delicious, but the waiter was very rude."
+  - "It's not the worst phone I've had, but I expected more for the price."
+  - "Oh great, another delay. Just what I needed."
+  - "I guess it works, mostly."
