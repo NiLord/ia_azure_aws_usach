@@ -69,3 +69,5 @@ models/
 
 # Azure
 azure.json
+
+.DS_Store
