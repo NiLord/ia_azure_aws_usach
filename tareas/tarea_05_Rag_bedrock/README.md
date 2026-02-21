@@ -18,10 +18,12 @@ Este proyecto contiene la plantilla de CloudFormation para desplegar automática
 4. En "Specify template", selecciona **Upload a template file**, sube el archivo `rag_infrastructure.yaml` y pulsa **Next**.
 5. Completa los detalles del stack:
    - **Stack name**: Ej. `LaboratorioRAG`
-   - **AllowedIP**: Tu dirección IP en formato CIDR (ej. `203.0.113.0/24`) o `0.0.0.0/0` para acceso público.
+   - **AllowedIP**: Tu dirección IP en formato CIDR (ej. `190.32.4.96/32`) o `0.0.0.0/0` para acceso público. (puedes buscarla en https://www.cual-es-mi-ip.net/)
    - **GithubPdfUrl**: URL directa (raw) del archivo PDF que quieres cargar como conocimiento (ej. `https://raw.githubusercontent.com/user/repo/main/documento.pdf`).
    - **InstanceType**: `t3.micro` (por defecto).
    - **KeyName**: Selecciona un KeyPair existente si deseas conectarte por SSH a la EC2.
+   - **VpcId**: Selecciona la VPC donde quieres crear los recursos (generalmente tu VPC por defecto).
+   - **SubnetId**: Selecciona una subred pública que pertenezca a la VPC que seleccionaste en el paso anterior.
 6. Pulsa **Next** en las siguientes pantallas.
 7. En la pantalla final, marca la casilla **I acknowledge that AWS CloudFormation might create IAM resources with custom names** y haz clic en **Submit**.
 8. Espera a que el stack alcance el estado `CREATE_COMPLETE`. Ve a la pestaña **Outputs** para ver:

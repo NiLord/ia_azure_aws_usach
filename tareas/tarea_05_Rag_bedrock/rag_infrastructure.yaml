@@ -16,6 +16,14 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
     Description: 'Nombre del KeyPair existente para el acceso SSH a la instancia EC2.'
   
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: 'VPC donde se crearán los recursos (Selecciona la VPC predeterminada u otra).'
+    
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: 'Subred pública donde se desplegará la instancia EC2 (debe pertenecer a la VPC seleccionada).'
+
   InstanceType:
     Type: String
     Default: 't3.micro'
@@ -73,6 +81,7 @@ Resources:
     Properties:
       GroupName: !Sub 'SG-Laboratorio-IA-${AWS::Region}'
       GroupDescription: 'Permitir acceso SSH y Streamlit'
+      VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 22
@@ -92,8 +101,12 @@ Resources:
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyName
       IamInstanceProfile: !Ref Ec2InstanceProfile
-      SecurityGroupIds:
-        - !Ref SecurityGroup
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: '0'
+          GroupSet:
+            - !Ref SecurityGroup
+          SubnetId: !Ref SubnetId
       Tags:
         - Key: Name
           Value: EC2-Bedrock-Lab
