@@ -57,7 +57,6 @@ logs/
 *.csv
 *.json
 *.parquet
-data/
 datasets/
 
 # Models
@@ -69,3 +68,5 @@ models/
 
 # Azure
 azure.json
+
+.DS_Store

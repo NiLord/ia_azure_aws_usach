@@ -1,0 +1,172 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Infraestructura para RAG con Amazon Bedrock y Streamlit (Tarea 05)'
+
+Parameters:
+  GithubPdfUrl:
+    Type: String
+    Description: 'URL directa (raw) del archivo PDF en GitHub. Ejemplo: https://raw.githubusercontent.com/usuario/repo/main/archivo.pdf'
+    Default: 'https://raw.githubusercontent.com/user/repo/main/documento.pdf'
+  
+  AllowedIP:
+    Type: String
+    Description: 'IP permitida para acceder por SSH y al puerto 8501 de Streamlit (formato CIDR, ej. 203.0.113.0/24). Usa 0.0.0.0/0 para permitir desde cualquier lugar.'
+    Default: '0.0.0.0/0'
+  
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: 'Nombre del KeyPair existente para el acceso SSH a la instancia EC2.'
+  
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: 'VPC donde se crearán los recursos (Selecciona la VPC predeterminada u otra).'
+    
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: 'Subred pública donde se desplegará la instancia EC2 (debe pertenecer a la VPC seleccionada).'
+
+  InstanceType:
+    Type: String
+    Default: 't3.micro'
+    AllowedValues:
+      - t3.micro
+      - t2.micro
+    Description: 'Tipo de instancia EC2. Se recomienda t3.micro (Free Tier).'
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'datos-ia-usach-${AWS::AccountId}-${AWS::Region}'
+
+  # 1.2 y 1.3 Crear Politica de Permisos y Rol para la EC2
+  Ec2IamRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'Rol-EC2-Bedrock-Lab-${AWS::Region}'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: PermisosLaboratorioBedrock
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:RetrieveAndGenerate
+                  - bedrock:Retrieve
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource: 
+                  - !GetAtt S3Bucket.Arn
+                  - !Sub '${S3Bucket.Arn}/*'
+
+  Ec2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref Ec2IamRole
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub 'SG-Laboratorio-IA-${AWS::Region}'
+      GroupDescription: 'Permitir acceso SSH y Streamlit'
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AllowedIP
+          Description: 'Acceso SSH'
+        - IpProtocol: tcp
+          FromPort: 8501
+          ToPort: 8501
+          CidrIp: !Ref AllowedIP
+          Description: 'Acceso Streamlit'
+
+  Ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0bea3ccc607167c10
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyName
+      IamInstanceProfile: !Ref Ec2InstanceProfile
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: '0'
+          GroupSet:
+            - !Ref SecurityGroup
+          SubnetId: !Ref SubnetId
+      Tags:
+        - Key: Name
+          Value: EC2-Bedrock-Lab
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          # Redirigir la salida del UserData a un log para depuración
+          exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+          
+          echo "Actualizando sistema e instalando dependencias..."
+          dnf update -y
+          dnf install python3-pip wget -y
+          
+          echo "Descargando PDF desde GitHub..."
+          wget "${GithubPdfUrl}" -O /tmp/documento.pdf
+          
+          echo "Subiendo PDF a S3..."
+          aws s3 cp /tmp/documento.pdf s3://${S3Bucket}/documento.pdf
+          
+          echo "Creando aplicación app.py..."
+          cat << 'EOF' > /home/ec2-user/app.py
+          import streamlit as st
+          import boto3
+
+          client = boto3.client('bedrock-agent-runtime', region_name='us-east-1')
+          st.title("Asistente RAG - Capacitación USACH")
+          kb_id = st.text_input("Ingresa el ID de tu Knowledge Base (Ej: US6LSEJEGC):")
+          query = st.chat_input("¿Qué deseas preguntar sobre tus documentos?")
+
+          if query and kb_id:
+              with st.spinner("Buscando en documentos..."):
+                  # Esta línea debe estar indentada (con espacios)
+                  res = client.retrieve_and_generate(
+                      input={'text': query},
+                      retrieveAndGenerateConfiguration={
+                          'type': 'KNOWLEDGE_BASE',
+                          'knowledgeBaseConfiguration': {
+                              'knowledgeBaseId': kb_id,
+                              'modelArn': 'arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-lite-v1:0'
+                          }
+                      }
+                  )
+                  st.write(res['output']['text'])
+          EOF
+          
+          chown ec2-user:ec2-user /home/ec2-user/app.py
+          
+          echo "Instalando dependencias de Python y ejecutando Streamlit..."
+          su - ec2-user -c "pip3 install boto3 streamlit --user"
+          su - ec2-user -c "nohup /home/ec2-user/.local/bin/streamlit run /home/ec2-user/app.py --server.port 8501 > /home/ec2-user/streamlit.log 2>&1 &"
+
+Outputs:
+  StreamlitUrl:
+    Description: 'URL para acceder a la aplicación web Streamlit'
+    Value: !Sub 'http://${Ec2Instance.PublicDnsName}:8501'
+  
+  S3BucketName:
+    Description: 'Nombre del bucket S3 creado (usar en Bedrock Knowledge Base)'
+    Value: !Ref S3Bucket
+  
+  S3BucketUri:
+    Description: 'URI del bucket S3 (usar al configurar el Data Source de Bedrock)'
+    Value: !Sub 's3://${S3Bucket}/'
