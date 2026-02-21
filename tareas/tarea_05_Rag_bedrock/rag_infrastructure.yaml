@@ -5,7 +5,7 @@ Parameters:
   GithubPdfUrl:
     Type: String
     Description: 'URL directa (raw) del archivo PDF en GitHub. Ejemplo: https://raw.githubusercontent.com/usuario/repo/main/archivo.pdf'
-    Default: 'https://raw.githubusercontent.com/user/repo/main/documento.pdf'
+    Default: 'https://raw.githubusercontent.com/NiLord/ia_azure_aws_usach/tarea_05/tareas/tarea_05_Rag_bedrock/data/documento.pdf'
   
   AllowedIP:
     Type: String
@@ -26,11 +26,11 @@ Parameters:
 
   InstanceType:
     Type: String
-    Default: 't3.micro'
+    Default: 't4g.micro'
     AllowedValues:
-      - t3.micro
-      - t2.micro
-    Description: 'Tipo de instancia EC2. Se recomienda t3.micro (Free Tier).'
+      - t4g.micro
+      - t4g.small
+    Description: 'Tipo de instancia EC2 (ARM). Se recomienda t4g.micro (Free Tier).'
 
 Resources:
   S3Bucket:
