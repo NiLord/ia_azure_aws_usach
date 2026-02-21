@@ -38,7 +38,6 @@ Resources:
     Properties:
       BucketName: !Sub 'datos-ia-usach-${AWS::AccountId}-${AWS::Region}'
 
-  # 1.2 y 1.3 Crear Politica de Permisos y Rol para la EC2
   Ec2IamRole:
     Type: AWS::IAM::Role
     Properties:
@@ -138,7 +137,6 @@ Resources:
 
           if query and kb_id:
               with st.spinner("Buscando en documentos..."):
-                  # Esta línea debe estar indentada (con espacios)
                   res = client.retrieve_and_generate(
                       input={'text': query},
                       retrieveAndGenerateConfiguration={
